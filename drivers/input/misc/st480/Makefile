@@ -1,0 +1,1 @@
+obj-$(CONFIG_INPUT_ST480) += st480.o

@@ -1,0 +1,9 @@
+#
+# udc i2c configuration
+#
+menuconfig UDC_I2C
+	bool "UDC_I2C"
+	default n
+	help
+	yes - support udc_i2c ; no  - not support udc_i2c
+

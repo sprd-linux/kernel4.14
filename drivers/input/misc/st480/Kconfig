@@ -1,0 +1,7 @@
+config INPUT_ST480
+         tristate "STMicroelectronics LSM6DS3 sensor"
+         depends on (I2C || SPI_MASTER) && SYSFS
+         help
+           This driver support the  ST480 sensor.
+           To compile this driver as a module, choose M here. The module
+	   will be called st480.

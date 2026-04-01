@@ -1,0 +1,9 @@
+#
+# udc gpio configuration
+#
+menuconfig UDC_GPIO
+	bool "UDC_GPIO"
+	default n
+	help
+	yes - support udc_gpio ; no  - not support udc_gpio
+

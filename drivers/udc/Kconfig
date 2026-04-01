@@ -1,0 +1,97 @@
+#
+# Udc configuration
+#
+menuconfig UDC
+	bool "UDC_Config"
+	default n
+	help
+	Say Y here, and a list of supported udc will be displayed.
+	This option doesn't affect the kernel.
+        If unsure, say Y.
+
+if  UDC
+choice
+  bool "UDC_VER"
+	depends on UDC
+	default UDC_VER_5_1_3
+
+config UDC_VER_2_3_5
+	bool "UDC_VER_2_3_5"
+	depends on UDC
+	help
+	  Say Y here if you  want to use UDC_VERSION support .
+	  
+	  If unsure, say N.
+	  
+config UDC_VER_4_0_1
+	bool "UDC_VER_4_0_1"
+	depends on UDC
+	help
+	  Say Y here if you  want to use UDC_VERSION support .
+	  
+	  If unsure, say N.	
+	  
+config UDC_VER_5_1_3
+	bool "UDC_VER_5_1_3"
+	depends on UDC
+	help
+	  Say Y here if you  want to use UDC_VERSION support .
+	  
+	  If unsure, say N.	
+	    
+endchoice	
+
+choice
+bool "UDC_BOARD"
+        depends on UDC_VER_4_0_1
+        default UDC_SC7710
+
+config UDC_SC8810
+        bool "CONFIG_UDC_SC8810"
+        depends on UDC_VER_4_0_1
+        default y
+        help
+          Say Y here if you  want to use choose UDC SC8810 support .
+    
+          If unsure, say N.
+
+config UDC_SC8825
+        bool "CONFIG_UDC_SC8825"
+        depends on UDC_VER_4_0_1
+        help
+          Say Y here if you  want to use choose UDC SC8825 support .
+
+          If unsure, say N.
+
+config UDC_SC7710
+        bool "CONFIG_UDC_SC7710"
+        depends on UDC_VER_4_0_1
+        help
+          Say Y here if you  want to use choose UDC SC7710 support .
+
+          If unsure, say N.
+		  
+config UDC_SC7731
+        bool "CONFIG_UDC_SC7731"
+        depends on UDC_VER_5_1_3
+        help
+          Say Y here if you  want to use choose UDC SC7710 support .
+
+          If unsure, say N.
+
+ config UDC_SC7731C
+        bool "CONFIG_UDC_SC7731C"
+        depends on UDC_VER_5_1_3
+        help
+          Say Y here if you  want to use choose UDC SC7710 support .
+
+          If unsure, say N.
+endchoice
+
+
+source "drivers/udc/udc_gpio/Kconfig"
+source "drivers/udc/udc_i2c/Kconfig"
+source "drivers/udc/udc_lcd/Kconfig"
+source "drivers/udc/udc_tp/Kconfig"
+
+endif

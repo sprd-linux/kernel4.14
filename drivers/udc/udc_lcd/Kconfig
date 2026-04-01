@@ -1,0 +1,32 @@
+#
+# udc lcd configuration
+#
+menuconfig UDC_LCD
+	bool "UDC_LCD"
+	default n
+	help
+	yes - support udc_lcd; no  - not support udc_lcd
+
+
+config UDC_LCD_MCU
+    bool "UDC_LCD_MCU"
+	depends on UDC_LCD
+	default n
+	help
+	yes - support mcu udc_lcd; no  - not support mcu udc_lcd
+
+config UDC_LCD_RGB
+    bool "UDC_LCD_RGB"
+	depends on UDC_LCD
+	default n
+	help
+	yes - support rgb udc_lcd; no  - not support rgb udc_lcd
+
+config UDC_LCD_MIPI
+    bool " UDC_LCD_MIPI"
+	depends on UDC_LCD
+	default y
+	help
+    yes - support mipi udc_lcd; no  - not support mipi udc_lcd
+     
+	
