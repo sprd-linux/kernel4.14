@@ -25,6 +25,7 @@
 #include "sprd_drm_gsp.h"
 #include "sprd_gem.h"
 #include <uapi/drm/sprd_drm_gsp.h>
+#include <drm/drm_fb_cma_helper.h>
 
 #define DRIVER_NAME	"sprd"
 #define DRIVER_DESC	"Spreadtrum SoCs' DRM Driver"
@@ -423,6 +424,19 @@ static struct drm_driver sprd_drm_drv = {
 	.minor			= DRIVER_MINOR,
 };
 
+static struct drm_device *fbdev_drm_dev;
+static void sprd_fbdev_work_fn(struct work_struct *w)
+{
+	if (!fbdev_drm_dev)
+		return;
+	if (IS_ERR(drm_fbdev_cma_init(fbdev_drm_dev, 32,
+				      fbdev_drm_dev->mode_config.num_connector)))
+		DRM_ERROR("failed to init fbdev emulation\n");
+	else
+		DRM_INFO("fbdev emulation framebuffer created\n");
+}
+static DECLARE_DELAYED_WORK(sprd_fbdev_work, sprd_fbdev_work_fn);
+
 static int sprd_drm_bind(struct device *dev)
 {
 	struct drm_device *drm;
@@ -464,6 +478,17 @@ static int sprd_drm_bind(struct device *dev)
 
 	/* reset all the states of crtc/plane/encoder/connector */
 	drm_mode_config_reset(drm);
+
+	/* Create the fbdev emulation framebuffer so that fbcon can attach:
+	 * the SPRD driver skipped it (Android uses its own graphics stack),
+	 * but a Debian console needs /dev/fb0 + a lit panel. Deferred: at
+	 * bind time the panel (mipi_dsi device) has not attached yet, and
+	 * the fbdev helper skips creation when the connector has no modes
+	 * ("Cannot find any crtc or sizes"). */
+#ifdef CONFIG_DRM_FBDEV_EMULATION
+	fbdev_drm_dev = drm;
+	schedule_delayed_work(&sprd_fbdev_work, msecs_to_jiffies(1200));
+#endif
 
 	/* init kms poll for handling hpd */
 	drm_kms_helper_poll_init(drm);

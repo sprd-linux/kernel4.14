@@ -354,6 +354,15 @@ static int sprd_dsi_host_attach(struct mipi_dsi_host *host,
 	else
 		ctx->esc_clk = 20000;
 #endif
+
+	/* The panel is hardwired to the DSI bus: force the connector
+	 * connected. The initial connector probe ran before the panel
+	 * attached (deferred probe) and cached "disconnected", which left
+	 * the connector with no modes ("No modes found") and no fb0. */
+	dsi->connector.status = connector_status_connected;
+	if (dsi->connector.dev)
+		drm_kms_helper_hotplug_event(dsi->connector.dev);
+
 	return 0;
 }
 
