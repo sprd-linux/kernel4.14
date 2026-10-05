@@ -64,10 +64,10 @@ static inline struct regmap *syscon_regmap_lookup_by_name(
 	return ERR_PTR(-ENOTSUPP);
 }
 
-static int syscon_get_args_by_name(struct device_node *np,
-				const char *name,
-				int arg_count,
-				unsigned int *out_args)
+static inline int syscon_get_args_by_name(struct device_node *np,
+					const char *name,
+					int arg_count,
+					unsigned int *out_args)
 {
 	return -ENOTSUPP;
 }

@@ -364,7 +364,8 @@ HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 HOSTCC       = gcc
 HOSTCXX      = g++
 HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
-		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS)
+		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS) \
+		-fcommon
 HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS)
 HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS)
 HOST_LOADLIBES := $(HOST_LFS_LIBS)
@@ -497,6 +498,21 @@ CLANG_FLAGS	+= -no-integrated-as
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 export CLANG_FLAGS
+# The tree builds with global -Wall -Werror. Clang 13+ added diagnostics that
+# fire on this 4.14 code (unused-but-set-variable, align-mismatch,
+# misleading-indentation, bitwise-instead-of-logical); suppress them so clang
+# versions newer than the BSP prebuilt can compile the tree. cc-disable-warning
+# only emits the flag when the compiler knows the warning. These are style or
+# heuristic diagnostics; the flagged code must NOT be reworked (e.g. the
+# touchscreen of_ helpers rely on evaluating both sides of '|').
+KBUILD_CFLAGS	+= $(call cc-disable-warning, unused-but-set-variable)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, align-mismatch)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, misleading-indentation)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, bitwise-instead-of-logical)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, void-pointer-to-enum-cast)
+# Clang 15 defaults to DWARF5, which the bundled gcc-4.9 binutils ld cannot
+# parse ("Dwarf Error: found dwarf version '5'"). Keep debug info at v4.
+KBUILD_CFLAGS	+= $(call cc-option, -gdwarf-4)
 endif
 
 RETPOLINE_CFLAGS_GCC := -mindirect-branch=thunk-extern -mindirect-branch-register

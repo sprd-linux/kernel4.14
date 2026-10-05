@@ -96,6 +96,24 @@ char *strcpy(char *dest, const char *src)
 EXPORT_SYMBOL(strcpy);
 #endif
 
+#ifndef __HAVE_ARCH_STPCPY
+/**
+ * stpcpy - copy a %NUL terminated string and return the pointer to its end
+ * @dest: Where to copy the string to
+ * @src: Where to copy the string from
+ *
+ * Newer clang versions emit calls to stpcpy as a libc optimization when
+ * lowering string operations; the kernel does not otherwise provide it.
+ */
+char *stpcpy(char *dest, const char *src)
+{
+	while ((*dest++ = *src++) != '\0')
+		/* nothing */;
+	return dest - 1;
+}
+EXPORT_SYMBOL(stpcpy);
+#endif
+
 #ifndef __HAVE_ARCH_STRNCPY
 /**
  * strncpy - Copy a length-limited, C-string
