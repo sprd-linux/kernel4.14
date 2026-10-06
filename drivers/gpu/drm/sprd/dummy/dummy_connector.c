@@ -41,7 +41,7 @@ __weak int sprd_dpu_stop(struct sprd_dpu *dpu) { return 0; }
 static void sprd_dummy_encoder_enable(struct drm_encoder *encoder)
 {
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	/* special case for dpu crtc */
 	if (strcmp(encoder->crtc->name, "dummy-crtc")) {
@@ -53,7 +53,7 @@ static void sprd_dummy_encoder_enable(struct drm_encoder *encoder)
 
 static void sprd_dummy_encoder_disable(struct drm_encoder *encoder)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	/* special case for dpu crtc */
 	if (strcmp(encoder->crtc->name, "dummy-crtc")) {
@@ -105,7 +105,7 @@ static int sprd_dummy_connector_get_modes(struct drm_connector *connector)
 		return -ENOMEM;
 	}
 
-	DRM_INFO("%s() mode: "DRM_MODE_FMT"\n", __func__, DRM_MODE_ARG(mode));
+	DRM_DEBUG("%s() mode: "DRM_MODE_FMT"\n", __func__, DRM_MODE_ARG(mode));
 
 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 	drm_mode_probed_add(connector, mode);
@@ -122,7 +122,7 @@ static struct drm_connector_helper_funcs dummy_connector_helper_funcs = {
 
 static void sprd_dummy_connector_destroy(struct drm_connector *connector)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);

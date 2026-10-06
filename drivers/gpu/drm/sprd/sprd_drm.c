@@ -452,7 +452,7 @@ static int sprd_drm_bind(struct device *dev)
 	struct sprd_drm *sprd;
 	int err;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	drm = drm_dev_alloc(&sprd_drm_drv, dev);
 	if (IS_ERR(drm))
@@ -521,7 +521,7 @@ err_free_drm:
 
 static void sprd_drm_unbind(struct device *dev)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 	drm_put_dev(dev_get_drvdata(dev));
 }
 
@@ -672,7 +672,7 @@ static int sprd_drm_pm_suspend(struct device *dev)
 		return 0;
 	}
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	drm_kms_helper_poll_disable(drm);
 
@@ -699,7 +699,7 @@ static int sprd_drm_pm_resume(struct device *dev)
 		return 0;
 	}
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	sprd = drm->dev_private;
 	if (sprd->state) {

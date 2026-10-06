@@ -97,7 +97,7 @@ static struct drm_plane *sprd_dummy_plane_init(struct drm_device *drm,
 static void sprd_dummy_crtc_atomic_enable(struct drm_crtc *crtc,
 				   struct drm_crtc_state *old_state)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 }
 
 static void sprd_dummy_crtc_atomic_disable(struct drm_crtc *crtc,
@@ -110,7 +110,7 @@ static void sprd_dummy_crtc_atomic_disable(struct drm_crtc *crtc,
 	}
 	spin_unlock_irq(&crtc->dev->event_lock);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 }
 
 static void sprd_dummy_crtc_atomic_flush(struct drm_crtc *crtc,
@@ -134,7 +134,7 @@ static int sprd_dummy_crtc_enable_vblank(struct drm_crtc *crtc)
 {
 	struct dummy_crtc *dummy = crtc_to_dummy(crtc);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	hrtimer_start(&dummy->vsync_timer, ns_to_ktime(16666666),
 		      HRTIMER_MODE_REL);
@@ -146,7 +146,7 @@ static void sprd_dummy_crtc_disable_vblank(struct drm_crtc *crtc)
 {
 	struct dummy_crtc *dummy = crtc_to_dummy(crtc);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	hrtimer_cancel(&dummy->vsync_timer);
 }

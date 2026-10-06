@@ -340,7 +340,7 @@ static void sprd_plane_reset(struct drm_plane *plane)
 	struct sprd_plane *p = to_sprd_plane(plane);
 	struct sprd_plane_state *s;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	if (plane->state) {
 		__drm_atomic_helper_plane_destroy_state(plane->state);
@@ -621,7 +621,7 @@ static void sprd_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	struct sprd_dpu *dpu = crtc_to_dpu(crtc);
 	struct drm_display_mode *mode = &crtc->state->adjusted_mode;
 
-	DRM_INFO("%s() set mode: %s\n", __func__, dpu->mode->name);
+	DRM_DEBUG("%s() set mode: %s\n", __func__, dpu->mode->name);
 
 	/*
 	 * TODO:
@@ -654,7 +654,7 @@ static enum drm_mode_status sprd_crtc_mode_valid(struct drm_crtc *crtc,
 {
 	struct sprd_dpu *dpu = crtc_to_dpu(crtc);
 
-	DRM_INFO("%s() mode: "DRM_MODE_FMT"\n", __func__, DRM_MODE_ARG(mode));
+	DRM_DEBUG("%s() mode: "DRM_MODE_FMT"\n", __func__, DRM_MODE_ARG(mode));
 
 	if (mode->type & DRM_MODE_TYPE_DEFAULT)
 		dpu->mode = (struct drm_display_mode *)mode;
@@ -676,7 +676,7 @@ static void sprd_crtc_atomic_enable(struct drm_crtc *crtc,
 	struct sprd_dpu *dpu = crtc_to_dpu(crtc);
 	static bool is_enabled = true;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	/*
 	 * add if condition to avoid resume dpu for SR feature.
@@ -729,7 +729,7 @@ static void sprd_crtc_atomic_disable(struct drm_crtc *crtc,
 	struct sprd_dpu *dpu = crtc_to_dpu(crtc);
 	struct drm_device *drm = dpu->crtc.dev;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	/* add if condition to avoid suspend dpu for SR feature */
 	if (crtc->state->mode_changed && !crtc->state->active_changed)
@@ -912,7 +912,7 @@ static int sprd_crtc_init(struct drm_device *drm, struct drm_crtc *crtc,
 
 	sprd_crtc_create_properties(crtc);
 
-	DRM_INFO("%s() ok\n", __func__);
+	DRM_DEBUG("%s() ok\n", __func__);
 	return 0;
 }
 
@@ -1094,7 +1094,7 @@ static int sprd_dpu_bind(struct device *dev, struct device *master, void *data)
 	struct drm_plane *plane;
 	int err;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	plane = sprd_plane_init(drm, dpu);
 	if (IS_ERR_OR_NULL(plane)) {
@@ -1118,7 +1118,7 @@ static void sprd_dpu_unbind(struct device *dev, struct device *master,
 {
 	struct sprd_dpu *dpu = dev_get_drvdata(dev);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	drm_crtc_cleanup(&dpu->crtc);
 }

@@ -81,7 +81,7 @@ static int sprd_panel_unprepare(struct drm_panel *p)
 	struct gpio_timing *timing;
 	int items, i;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	if (panel->info.avee_gpio) {
 		gpiod_direction_output(panel->info.avee_gpio, 0);
@@ -114,7 +114,7 @@ static int sprd_panel_prepare(struct drm_panel *p)
 	struct gpio_timing *timing;
 	int items, i, ret;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	ret = regulator_enable(panel->supply);
 	if (ret < 0)
@@ -147,7 +147,7 @@ static int sprd_panel_disable(struct drm_panel *p)
 {
 	struct sprd_panel *panel = to_sprd_panel(p);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	mutex_lock(&panel_lock);
 	/*
@@ -183,7 +183,7 @@ static int sprd_panel_enable(struct drm_panel *p)
 {
 	struct sprd_panel *panel = to_sprd_panel(p);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	mutex_lock(&panel_lock);
 	sprd_panel_send_cmds(panel->slave,
@@ -216,7 +216,7 @@ static int sprd_panel_get_modes(struct drm_panel *p)
 	u32 surface_width = 0, surface_height = 0;
 	int i, mode_count = 0;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 	mode = drm_mode_duplicate(p->drm, &panel->info.mode);
 	if (!mode) {
 		DRM_ERROR("failed to alloc mode %s\n", panel->info.mode.name);
@@ -662,7 +662,7 @@ static int sprd_oled_backlight_init(struct sprd_panel *panel)
 			panel->info.cmds[CMD_OLED_BRIGHTNESS],
 			panel->info.cmds_len[CMD_OLED_BRIGHTNESS]);
 
-	DRM_INFO("%s() ok\n", __func__);
+	DRM_DEBUG("%s() ok\n", __func__);
 
 	return 0;
 }
@@ -976,7 +976,7 @@ static int sprd_panel_remove(struct mipi_dsi_device *slave)
 	struct sprd_panel *panel = mipi_dsi_get_drvdata(slave);
 	int ret;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 #ifdef CONFIG_UDC
 	panel->base.funcs->unprepare(&panel->base);
 	panel->base.funcs->disable(&panel->base);

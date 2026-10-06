@@ -87,7 +87,7 @@ static void sprd_dsi_encoder_enable(struct drm_encoder *encoder)
 	struct sprd_dpu *dpu = crtc_to_dpu(encoder->crtc);
 	static bool is_enabled = true;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	mutex_lock(&dsi_lock);
 
@@ -148,7 +148,7 @@ static void sprd_dsi_encoder_disable(struct drm_encoder *encoder)
 	struct sprd_dsi *dsi = encoder_to_dsi(encoder);
 	struct sprd_dpu *dpu = crtc_to_dpu(encoder->crtc);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	/* add if condition to avoid suspend dsi for SR feature */
 	if (encoder->crtc->state->mode_changed &&
@@ -189,14 +189,14 @@ static void sprd_dsi_encoder_mode_set(struct drm_encoder *encoder,
 {
 	struct sprd_dsi *dsi = encoder_to_dsi(encoder);
 
-	DRM_INFO("%s() set mode: %s\n", __func__, dsi->mode->name);
+	DRM_DEBUG("%s() set mode: %s\n", __func__, dsi->mode->name);
 }
 
 static int sprd_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 				    struct drm_crtc_state *crtc_state,
 				    struct drm_connector_state *conn_state)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	return 0;
 }
@@ -305,7 +305,7 @@ static int sprd_dsi_host_attach(struct mipi_dsi_host *host,
 	#endif
 	int ret;
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	dsi->slave = slave;
 	ctx->lanes = slave->lanes;
@@ -369,7 +369,7 @@ static int sprd_dsi_host_attach(struct mipi_dsi_host *host,
 static int sprd_dsi_host_detach(struct mipi_dsi_host *host,
 			   struct mipi_dsi_device *slave)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 	/* do nothing */
 	return 0;
 }
@@ -419,7 +419,7 @@ static int sprd_dsi_connector_get_modes(struct drm_connector *connector)
 {
 	struct sprd_dsi *dsi = connector_to_dsi(connector);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	return drm_panel_get_modes(dsi->panel);
 }
@@ -431,7 +431,7 @@ sprd_dsi_connector_mode_valid(struct drm_connector *connector,
 	struct sprd_dsi *dsi = connector_to_dsi(connector);
 	struct drm_display_mode *pmode;
 
-	DRM_INFO("%s() mode: "DRM_MODE_FMT"\n", __func__, DRM_MODE_ARG(mode));
+	DRM_DEBUG("%s() mode: "DRM_MODE_FMT"\n", __func__, DRM_MODE_ARG(mode));
 
 	if (mode->type & DRM_MODE_TYPE_PREFERRED) {
 		dsi->mode = mode;
@@ -457,7 +457,7 @@ sprd_dsi_connector_best_encoder(struct drm_connector *connector)
 {
 	struct sprd_dsi *dsi = connector_to_dsi(connector);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 	return &dsi->encoder;
 }
 
@@ -472,7 +472,7 @@ sprd_dsi_connector_detect(struct drm_connector *connector, bool force)
 {
 	struct sprd_dsi *dsi = connector_to_dsi(connector);
 
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	if (dsi->panel) {
 		drm_panel_attach(dsi->panel, connector);
@@ -484,7 +484,7 @@ sprd_dsi_connector_detect(struct drm_connector *connector, bool force)
 
 static void sprd_dsi_connector_destroy(struct drm_connector *connector)
 {
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);
@@ -654,7 +654,7 @@ static void sprd_dsi_unbind(struct device *dev,
 			struct device *master, void *data)
 {
 	/* do nothing */
-	DRM_INFO("%s()\n", __func__);
+	DRM_DEBUG("%s()\n", __func__);
 
 }
 
