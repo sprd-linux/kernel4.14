@@ -105,3 +105,4 @@ obj-$(CONFIG_DRM_PL111) += pl111/
 CFLAGS_drm_gem_shmem_helper.o = -include $(srctree)/drivers/gpu/drm/panfrost/backport_shim.h
 drm-$(CONFIG_DRM_GEM_SHMEM_HELPER) += drm_gem_shmem_helper.o
 obj-$(CONFIG_DRM_SCHED) += scheduler/
+obj-$(CONFIG_DRM_PANFROST) += panfrost/

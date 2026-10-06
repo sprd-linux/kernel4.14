@@ -374,3 +374,5 @@ config DRM_SCHED
 	depends on DRM
 	help
 	  DRM gpu scheduler (5.10 backport, used by panfrost).
+
+source "drivers/gpu/drm/panfrost/Kconfig"
