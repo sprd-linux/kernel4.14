@@ -362,3 +362,9 @@ endif # DRM_LEGACY
 config DRM_LIB_RANDOM
 	bool
 	default n
+
+config DRM_SCHED
+	tristate
+	depends on DRM
+	help
+	  DRM gpu scheduler (5.10 backport, used by panfrost).
