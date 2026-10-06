@@ -21,6 +21,9 @@ Required properties:
   See Documentation/devicetree/bindings/power/supply/battery.txt
 
 Optional Properties:
+- sprd,allow-missing-charger: allow gauge capacity readings when none of the
+  supported charger supplies is registered. Status is reported as unknown;
+  discharge-only low-capacity calibration is skipped until status is known.
 - sprd,comp-resistance-mohm: The coulomb counter internal resistance and the board
   ground resistance.
   Due to the ntc resistor is connected to the coulomb counter internal resistance of 20 million

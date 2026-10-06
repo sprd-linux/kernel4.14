@@ -118,6 +118,7 @@ struct sc27xx_fgu_data {
 	struct iio_channel *charge_cha;
 	struct iio_channel *bat_compatible_cha;
 	bool bat_present;
+	bool allow_missing_charger;
 	int internal_resist;
 	int total_cap;
 	int init_cap;
@@ -823,6 +824,14 @@ static int sc27xx_fgu_get_status(struct sc27xx_fgu_data *data, int *status)
 		*status = val.intval;
 	}
 
+	/* The gauge can measure capacity before a charger driver is available.
+	 * Do not invent a charging/discharging state for that board.
+	 */
+	if (ret == -EINVAL && data->allow_missing_charger) {
+		*status = POWER_SUPPLY_STATUS_UNKNOWN;
+		return 0;
+	}
+
 	return ret;
 }
 
@@ -954,6 +963,13 @@ static int sc27xx_fgu_get_property(struct power_supply *psy,
 		val->intval = data->boot_vol;
 		break;
 
+	case POWER_SUPPLY_PROP_CALIBRATE:
+		/* Calibration is a write-only command, not a readable measurement.
+		 * Let power_supply omit it from uevents without failing the battery.
+		 */
+		ret = -ENODATA;
+		break;
+
 	default:
 		ret = -EINVAL;
 		break;
@@ -1074,11 +1090,12 @@ static void sc27xx_fgu_low_capacity_calibration(struct sc27xx_fgu_data *data,
 	}
 
 	/*
-	 * If we are in charging mode or the battery temperature is
+	 * If charging status is unknown, we are charging, or temperature is
 	 * 10 degrees or less, then we do not need to calibrate the
 	 * lower capacity.
 	 */
-	if (chg_sts == POWER_SUPPLY_STATUS_CHARGING ||
+	if (chg_sts == POWER_SUPPLY_STATUS_UNKNOWN ||
+	    chg_sts == POWER_SUPPLY_STATUS_CHARGING ||
 	    data->bat_temp <= SC27XX_FGU_LOW_TEMP_REGION)
 		return;
 
@@ -1593,6 +1610,8 @@ static int sc27xx_fgu_probe(struct platform_device *pdev)
 	}
 
 	data->bat_present = !!ret;
+	data->allow_missing_charger = device_property_read_bool(&pdev->dev,
+						"sprd,allow-missing-charger");
 	mutex_init(&data->lock);
 	data->dev = &pdev->dev;
 	platform_set_drvdata(pdev, data);
