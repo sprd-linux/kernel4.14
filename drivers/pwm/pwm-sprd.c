@@ -6,6 +6,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/pwm.h>
 #include <linux/mutex.h>
 #include <linux/io.h>
@@ -33,6 +34,7 @@
 struct sprd_pwm_chip {
 	void __iomem *mmio_base;
 	int num_pwms;
+	u32 mod_max;
 	struct clk *clk_pwm[NUM_PWM];
 	struct clk *clk_eb[NUM_PWM];
 	bool eb_enabled[NUM_PWM];
@@ -74,7 +76,7 @@ static int sprd_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		spc->eb_enabled[pwm->hwpwm] = true;
 	}
 
-	tmp = duty_ns * PWM_MOD_MAX;
+	tmp = (u64)duty_ns * spc->mod_max;
 	level = DIV_ROUND_CLOSEST_ULL(tmp, period_ns);
 	dev_dbg(chip->dev, "duty_ns = %d, period_ns = %d, level = %d\n",
 		duty_ns, period_ns, level);
@@ -91,12 +93,12 @@ static int sprd_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * DC = (PWM_CLK_RATE * duty_ns) / (10^9 * (PRESCALE + 1))
 	 */
 	div = 1000000000;
-	div = div * PWM_MOD_MAX;
+	div = div * spc->mod_max;
 	val = clk_rate * period_ns;
 	prescale = div64_u64(val, div) - 1;
 	if (prescale < 0)
 		prescale = 0;
-	sprd_pwm_writel(spc, pwm->hwpwm, PWM_MOD, PWM_MOD_MAX);
+	sprd_pwm_writel(spc, pwm->hwpwm, PWM_MOD, spc->mod_max);
 	sprd_pwm_writel(spc, pwm->hwpwm, PWM_DUTY, level);
 	sprd_pwm_writel(spc, pwm->hwpwm, PWM_PAT_LOW, PWM_REG_MSK);
 	sprd_pwm_writel(spc, pwm->hwpwm, PWM_PAT_HIGH, PWM_REG_MSK);
@@ -150,7 +152,7 @@ static void sprd_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 			struct pwm_state *state)
 {
 	int rc, duty_ns, period_ns;
-	u32 enabled, duty, prescale;
+	u32 enabled, duty, prescale, mod;
 	u64 clk_rate, val;
 	struct sprd_pwm_chip *spc = container_of(chip,
 		struct sprd_pwm_chip, chip);
@@ -175,6 +177,7 @@ static void sprd_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	duty = sprd_pwm_readl(spc, pwm->hwpwm, PWM_DUTY) & PWM_REG_MSK;
 	prescale = sprd_pwm_readl(spc, pwm->hwpwm, PWM_PRESCALE) & PWM_REG_MSK;
+	mod = sprd_pwm_readl(spc, pwm->hwpwm, PWM_MOD) & spc->mod_max;
 	enabled = sprd_pwm_readl(spc, pwm->hwpwm, PWM_ENABLE) & BIT_ENABLE;
 
 	clk_rate = clk_get_rate(spc->clk_pwm[pwm->hwpwm]);
@@ -193,7 +196,7 @@ static void sprd_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * PV = (PWM_CLK_RATE * period_ns) / (10^9 * (PRESCALE + 1))
 	 * DC = (PWM_CLK_RATE * duty_ns) / (10^9 * (PRESCALE + 1))
 	 */
-	val = ((u64)prescale + 1) * NSEC_PER_SEC * PWM_MOD_MAX;
+	val = ((u64)prescale + 1) * NSEC_PER_SEC * mod;
 	period_ns = div64_u64(val, clk_rate);
 	val = ((u64)prescale + 1) * NSEC_PER_SEC * duty;
 	duty_ns = div64_u64(val, clk_rate);
@@ -260,7 +263,9 @@ static int sprd_pwm_clk_init(struct platform_device *pdev)
 }
 
 static const struct of_device_id sprd_pwm_of_match[] = {
-	{ .compatible = "sprd,sharkl5-pwm", },
+	/* Sharkle r3p0 has 8-bit MOD/DUTY, Sharkl5 has 10-bit counters. */
+	{ .compatible = "sprd,sharkle-pwm", .data = (void *)0xff },
+	{ .compatible = "sprd,sharkl5-pwm", .data = (void *)PWM_MOD_MAX },
 	{},
 };
 MODULE_DEVICE_TABLE(of, sprd_pwm_of_match);
@@ -280,6 +285,7 @@ static int sprd_pwm_probe(struct platform_device *pdev)
 	if (IS_ERR(spc->mmio_base))
 		return PTR_ERR(spc->mmio_base);
 
+	spc->mod_max = (uintptr_t)of_device_get_match_data(&pdev->dev);
 	platform_set_drvdata(pdev, spc);
 
 	ret = sprd_pwm_clk_init(pdev);
