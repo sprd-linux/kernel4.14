@@ -53,7 +53,7 @@
 
 #include <linux/amba/bus.h>
 
-#include "io-pgtable.h"
+#include <linux/io-pgtable.h>
 #include "arm-smmu-regs.h"
 
 /*

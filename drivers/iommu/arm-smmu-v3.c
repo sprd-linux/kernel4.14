@@ -39,7 +39,7 @@
 
 #include <linux/amba/bus.h>
 
-#include "io-pgtable.h"
+#include <linux/io-pgtable.h>
 
 /* MMIO registers */
 #define ARM_SMMU_IDR0			0x0

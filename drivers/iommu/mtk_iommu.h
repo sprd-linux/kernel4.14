@@ -24,7 +24,7 @@
 #include <linux/spinlock.h>
 #include <soc/mediatek/smi.h>
 
-#include "io-pgtable.h"
+#include <linux/io-pgtable.h>
 
 struct mtk_iommu_suspend_reg {
 	u32				standard_axi_mode;

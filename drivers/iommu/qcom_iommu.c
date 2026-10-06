@@ -42,7 +42,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 
-#include "io-pgtable.h"
+#include <linux/io-pgtable.h>
 #include "arm-smmu-regs.h"
 
 #define SMMU_INTR_SEL_NS     0x2000

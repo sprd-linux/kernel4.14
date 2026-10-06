@@ -29,7 +29,7 @@
 #include <asm/pgalloc.h>
 #endif
 
-#include "io-pgtable.h"
+#include <linux/io-pgtable.h>
 
 #define IPMMU_CTX_MAX 1
 

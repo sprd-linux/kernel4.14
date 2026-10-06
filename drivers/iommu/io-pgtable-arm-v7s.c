@@ -45,7 +45,7 @@
 
 #include <asm/barrier.h>
 
-#include "io-pgtable.h"
+#include <linux/io-pgtable.h>
 
 /* Struct accessors */
 #define io_pgtable_to_data(x)						\
