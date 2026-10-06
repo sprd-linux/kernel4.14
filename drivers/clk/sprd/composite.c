@@ -59,6 +59,29 @@ const struct clk_ops sprd_comp_ops = {
 };
 EXPORT_SYMBOL_GPL(sprd_comp_ops);
 
+/* Only the Sharkle GPU uses full-rate parents for its stock OPPs. Select
+ * an exact existing parent without retuning a PLL shared with other devices. */
+static int sprd_comp_full_parent_determine_rate(struct clk_hw *hw,
+					      struct clk_rate_request *req)
+{
+	unsigned long requested = req->rate;
+	int ret = __clk_mux_determine_rate_closest(hw, req);
+
+	if (ret)
+		return ret;
+	return req->rate == requested ? 0 : -EINVAL;
+}
+
+const struct clk_ops sprd_comp_full_parent_ops = {
+	.get_parent = sprd_comp_get_parent,
+	.set_parent = sprd_comp_set_parent,
+	.determine_rate = sprd_comp_full_parent_determine_rate,
+	.recalc_rate = sprd_comp_recalc_rate,
+	.set_rate = sprd_comp_set_rate,
+};
+EXPORT_SYMBOL_GPL(sprd_comp_full_parent_ops);
+
+
 static unsigned long sprd_comp_recalc_rate_sec(struct clk_hw *hw,
 					       unsigned long parent_rate)
 {

@@ -68,6 +68,7 @@ static inline struct sprd_comp *hw_to_sprd_comp(const struct clk_hw *hw)
 }
 
 extern const struct clk_ops sprd_comp_ops;
+extern const struct clk_ops sprd_comp_full_parent_ops;
 
 extern const struct clk_ops sprd_comp_ops_sec;
 

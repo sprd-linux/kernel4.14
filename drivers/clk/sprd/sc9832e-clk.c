@@ -1254,8 +1254,15 @@ static const struct sprd_clk_desc sc9832e_mm_gate_desc = {
 static const char * const gpu_parents[] = { "twpll-256m", "twpll-307m2",
 					    "twpll-384m", "twpll-512m",
 					    "gpll" };
-static SPRD_COMP_CLK(gpu_clk, "gpu-clk", gpu_parents, 0x4,
-		     0, 3, 4, 3, 0);
+static struct sprd_comp gpu_clk = {
+	.mux = _SPRD_MUX_CLK(0, 3, NULL),
+	.div = _SPRD_DIV_CLK(4, 3),
+	.common = {
+		.reg = 0x4,
+		.hw.init = CLK_HW_INIT_PARENTS("gpu-clk", gpu_parents,
+					      &sprd_comp_full_parent_ops, 0),
+	},
+};
 
 static struct sprd_clk_common *sc9832e_gpu_clk[] = {
 	&gpu_clk.common,

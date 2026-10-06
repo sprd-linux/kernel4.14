@@ -36,8 +36,6 @@ static int panfrost_devfreq_target(struct device *dev, unsigned long *freq,
 		return PTR_ERR(opp);
 	dev_pm_opp_put(opp);
 
-	/* SPRD sharkle: no GPU functional clk via DT; DVFS no-op for now. */
-	return 0;
 	err = dev_pm_opp_set_rate(dev, *freq);
 	if (err)
 		return err;
@@ -76,7 +74,9 @@ static int panfrost_devfreq_get_dev_status(struct device *dev,
 
 	dev_dbg(pfdev->dev, "busy %lu total %lu %lu %% freq %lu MHz\n",
 		status->busy_time, status->total_time,
-		status->busy_time / (status->total_time / 100),
+		status->total_time ?
+		(unsigned long)div64_u64((u64)status->busy_time * 100,
+					 status->total_time) : 0,
 		status->current_frequency / 1000 / 1000);
 
 	return 0;
