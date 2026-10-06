@@ -223,8 +223,11 @@ read_retry:
 	fput(file);
 	WCN_INFO("After read, wcn_image_buffer=%p size:%d read:%lld\n",
 		 wcn_image_buffer, size, off);
-	if (size + off != len)
-		WCN_INFO("download image may erro!!\n");
+	if (size) {
+		WCN_ERR("short firmware image: read:%lld expected:%u\n", off, len);
+		vfree(data);
+		return -ENODATA;
+	}
 
 	wcn_image_buffer = data;
 	if (wcn_dev_is_gnss(wcn_dev) && gnss_ops && gnss_ops->file_judge) {
@@ -245,13 +248,13 @@ read_retry:
 #endif
 
 	/* copy file data to target ddr address */
-	wcn_write_data_to_phy_addr(wcn_dev->base_addr, data, len);
+	ret = wcn_write_data_to_phy_addr(wcn_dev->base_addr, data, len);
 
 	vfree(wcn_image_buffer);
 
 	WCN_INFO("finish\n");
 
-	return 0;
+	return ret;
 }
 
 static int wcn_load_firmware_data(struct wcn_device *wcn_dev)
@@ -346,6 +349,41 @@ static int wcn_download_image_new(struct wcn_device *wcn_dev)
 	char *file;
 	int ret = 0;
 
+	if (!wcn_dev->file_length || wcn_dev->file_length > wcn_dev->maxsz)
+		return -EINVAL;
+
+	/* try firmware subsystem first for marlin (wcnmodem.bin in /lib/firmware) */
+	if (wcn_dev_is_marlin(wcn_dev)) {
+		const struct firmware *firmware = NULL;
+		char fname[FIRMWARE_FILEPATHNAME_LENGTH_MAX];
+
+		snprintf(fname, sizeof(fname), "%s.bin", WCN_BTWF_FILENAME);
+		ret = request_firmware_direct(&firmware, fname, NULL);
+		if (!ret && firmware) {
+			if (firmware->size < wcn_dev->file_length) {
+				WCN_ERR("short [%s]: size=%zu expected=%u\n", fname,
+					firmware->size, wcn_dev->file_length);
+				release_firmware(firmware);
+				return -ENODATA;
+			}
+			WCN_INFO("load [%s] from firmware subsystem, size=%zu\n",
+				 fname, firmware->size);
+			ret = wcn_write_data_to_phy_addr(wcn_dev->base_addr,
+							 (void *)firmware->data,
+							 wcn_dev->file_length);
+			release_firmware(firmware);
+			if (!ret) {
+				WCN_INFO("loading image [%s] successfully!\n",
+					 fname);
+				return 0;
+			}
+			WCN_ERR("wcn_mem_ram_vmap_nocache fail, fallback\n");
+		} else {
+			WCN_ERR("no [%s] in /lib/firmware, fallback to partition\n",
+				fname);
+		}
+	}
+
 	/* file_path used in dts */
 	if (wcn_dev->file_path) {
 		file = wcn_dev->file_path;
@@ -366,10 +404,10 @@ static int wcn_download_image_new(struct wcn_device *wcn_dev)
 				file = wcn_dev->file_path_ext;
 			gnss_file_path_set(file);
 			WCN_INFO("load config file:%s\n", file);
-			wcn_load_firmware_img(wcn_dev, file,
+			ret = wcn_load_firmware_img(wcn_dev, file,
 					      wcn_dev->file_length);
 		}
-		return 0;
+		return ret;
 	}
 
 	/* old function */
@@ -1031,4 +1069,3 @@ int stop_marlin(u32 subsys)
 	return stop_integrate_wcn(subsys);
 }
 EXPORT_SYMBOL_GPL(stop_marlin);
-
