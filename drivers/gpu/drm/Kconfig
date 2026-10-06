@@ -363,6 +363,12 @@ config DRM_LIB_RANDOM
 	bool
 	default n
 
+config DRM_GEM_SHMEM_HELPER
+	tristate
+	depends on DRM
+	help
+	  GEM shmem helper (5.2 backport, used by panfrost).
+
 config DRM_SCHED
 	tristate
 	depends on DRM
