@@ -605,23 +605,30 @@ static int enter_state(suspend_state_t state)
 	if (!mutex_trylock(&pm_mutex))
 		return -EBUSY;
 
-	dirty = (global_node_page_state(NR_FILE_DIRTY)
-			+ global_node_page_state(NR_WRITEBACK)) << (PAGE_SHIFT - 10);
-	spin_lock(&suspend_sys_sync_lock);
-	if (sync_start == 1) {
+	/* Android autosleep retries -EBUSY; systemd's explicit suspend does
+	 * not. Keep the vendor retry policy only for autosleep, and let an
+	 * explicit suspend reach the synchronous filesystem flush below. */
+	if (IS_ENABLED(CONFIG_PM_AUTOSLEEP)) {
+		dirty = (global_node_page_state(NR_FILE_DIRTY)
+				+ global_node_page_state(NR_WRITEBACK)) << (PAGE_SHIFT - 10);
+		spin_lock(&suspend_sys_sync_lock);
+		if (sync_start == 1) {
+			spin_unlock(&suspend_sys_sync_lock);
+			error = -EBUSY;
+			pr_info("PM: suspend sync-queue syncing(%lu kB)...\n", dirty);
+			goto Unlock;
+		}
 		spin_unlock(&suspend_sys_sync_lock);
-		error = -EBUSY;
-		pr_info("PM: suspend sync-queue syncing(%lu kB)...\n", dirty);
-		goto Unlock;
-	}
-	spin_unlock(&suspend_sys_sync_lock);
-	if (dirty > DEEP_SLEEP_RETRY_DIRTY_WRITEBACK_THRESHOLD) {
-		if (dirty < DEEP_SLEEP_RETRY_TRIGGER_SYNC_QUEUE_THRESHOLD)
-			suspend_sys_sync_queue();
-		error = -EBUSY;
-		pr_info("PM: dirty and writeback data is %lu kB, "
-			"it's too much for sys_sync, try again!\n", dirty);
-		goto Unlock;
+		if (dirty > DEEP_SLEEP_RETRY_DIRTY_WRITEBACK_THRESHOLD) {
+			if (dirty < DEEP_SLEEP_RETRY_TRIGGER_SYNC_QUEUE_THRESHOLD)
+				suspend_sys_sync_queue();
+			error = -EBUSY;
+			pr_info("PM: dirty and writeback data is %lu kB, "
+				"it's too much for sys_sync, try again!\n", dirty);
+			goto Unlock;
+		}
+	} else {
+		flush_work(&suspend_sys_sync_work);
 	}
 
 	if (state == PM_SUSPEND_TO_IDLE)
