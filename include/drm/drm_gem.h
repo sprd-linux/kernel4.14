@@ -35,6 +35,7 @@
  */
 
 #include <linux/kref.h>
+#include <linux/reservation.h>
 
 #include <drm/drm_vma_manager.h>
 
@@ -46,6 +47,24 @@
  *
  * Buffer objects are often abbreviated to BO.
  */
+
+/* 4.14 backport (mainline 4.19+): per-object GEM function tables. */
+struct drm_gem_object_funcs {
+	void (*free)(struct drm_gem_object *obj);
+	int (*open)(struct drm_gem_object *obj, struct drm_file *file);
+	void (*close)(struct drm_gem_object *obj, struct drm_file *file);
+	void (*print_info)(struct drm_printer *p, unsigned int indent,
+			   const struct drm_gem_object *obj);
+	struct dma_buf *(*export)(struct drm_gem_object *obj, int flags);
+	int (*pin)(struct drm_gem_object *obj);
+	void (*unpin)(struct drm_gem_object *obj);
+	struct sg_table *(*get_sg_table)(struct drm_gem_object *obj);
+	void *(*vmap)(struct drm_gem_object *obj);
+	void (*vunmap)(struct drm_gem_object *obj, void *vaddr);
+	int (*mmap)(struct drm_gem_object *obj, struct vm_area_struct *vma);
+	const struct vm_operations_struct *vm_ops;
+};
+
 struct drm_gem_object {
 	/**
 	 * @refcount:
@@ -161,6 +180,12 @@ struct drm_gem_object {
 	 * simply leave it as NULL.
 	 */
 	struct dma_buf_attachment *import_attach;
+
+	/* 4.14 backport (mainline 5.2+): per-object reservation for shmem GEM
+	 * (panfrost). Normally resv == &_resv. */
+	struct reservation_object _resv;
+	struct reservation_object *resv;
+	const struct drm_gem_object_funcs *funcs;
 };
 
 /**
@@ -301,6 +326,8 @@ struct page **drm_gem_get_pages(struct drm_gem_object *obj);
 void drm_gem_put_pages(struct drm_gem_object *obj, struct page **pages,
 		bool dirty, bool accessed);
 
+int drm_gem_objects_lookup(struct drm_file *filp, void __user *bo_handles,
+			   int count, struct drm_gem_object ***objs_out);
 struct drm_gem_object *drm_gem_object_lookup(struct drm_file *filp, u32 handle);
 int drm_gem_dumb_map_offset(struct drm_file *file, struct drm_device *dev,
 			    u32 handle, u64 *offset);

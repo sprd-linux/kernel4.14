@@ -139,8 +139,10 @@ int drm_gem_object_init(struct drm_device *dev,
 	drm_gem_private_object_init(dev, obj, size);
 
 	filp = shmem_file_setup("drm mm object", size, VM_NORESERVE);
-	if (IS_ERR(filp))
+	if (IS_ERR(filp)) {
+		reservation_object_fini(&obj->_resv);
 		return PTR_ERR(filp);
+	}
 
 	obj->filp = filp;
 
@@ -169,6 +171,8 @@ void drm_gem_private_object_init(struct drm_device *dev,
 	kref_init(&obj->refcount);
 	obj->handle_count = 0;
 	obj->size = size;
+	reservation_object_init(&obj->_resv);
+	obj->resv = &obj->_resv;
 	drm_vma_node_reset(&obj->vma_node);
 }
 EXPORT_SYMBOL(drm_gem_private_object_init);
@@ -256,7 +260,9 @@ drm_gem_object_release_handle(int id, void *ptr, void *data)
 	struct drm_gem_object *obj = ptr;
 	struct drm_device *dev = obj->dev;
 
-	if (dev->driver->gem_close_object)
+	if (obj->funcs && obj->funcs->close)
+		obj->funcs->close(obj, file_priv);
+	else if (dev->driver->gem_close_object)
 		dev->driver->gem_close_object(obj, file_priv);
 
 	if (drm_core_check_feature(dev, DRIVER_PRIME))
@@ -412,7 +418,11 @@ drm_gem_handle_create_tail(struct drm_file *file_priv,
 	if (ret)
 		goto err_remove;
 
-	if (dev->driver->gem_open_object) {
+	if (obj->funcs && obj->funcs->open) {
+		ret = obj->funcs->open(obj, file_priv);
+		if (ret)
+			goto err_revoke;
+	} else if (dev->driver->gem_open_object) {
 		ret = dev->driver->gem_open_object(obj, file_priv);
 		if (ret)
 			goto err_revoke;
@@ -632,6 +642,64 @@ EXPORT_SYMBOL(drm_gem_put_pages);
  * A reference to the object named by the handle if such exists on @filp, NULL
  * otherwise.
  */
+static int objects_lookup(struct drm_file *filp, u32 *handle, int count,
+			  struct drm_gem_object **objs)
+{
+	int i, ret = 0;
+	struct drm_gem_object *obj;
+
+	spin_lock(&filp->table_lock);
+
+	for (i = 0; i < count; i++) {
+		obj = idr_find(&filp->object_idr, handle[i]);
+		if (!obj) {
+			ret = -ENOENT;
+			break;
+		}
+		drm_gem_object_get(obj);
+		objs[i] = obj;
+	}
+	spin_unlock(&filp->table_lock);
+
+	return ret;
+}
+
+int drm_gem_objects_lookup(struct drm_file *filp, void __user *bo_handles,
+			   int count, struct drm_gem_object ***objs_out)
+{
+	int ret;
+	u32 *handles;
+	struct drm_gem_object **objs;
+
+	if (!count)
+		return 0;
+
+	objs = kvmalloc_array(count, sizeof(struct drm_gem_object *),
+			      GFP_KERNEL | __GFP_ZERO);
+	if (!objs)
+		return -ENOMEM;
+
+	*objs_out = objs;
+
+	handles = kvmalloc_array(count, sizeof(u32), GFP_KERNEL);
+	if (!handles) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (copy_from_user(handles, bo_handles, count * sizeof(u32))) {
+		ret = -EFAULT;
+		DRM_DEBUG("Failed to copy in GEM handles\n");
+		goto out;
+	}
+
+	ret = objects_lookup(filp, handles, count, objs);
+out:
+	kvfree(handles);
+	return ret;
+}
+EXPORT_SYMBOL(drm_gem_objects_lookup);
+
 struct drm_gem_object *
 drm_gem_object_lookup(struct drm_file *filp, u32 handle)
 {
@@ -809,6 +877,7 @@ drm_gem_release(struct drm_device *dev, struct drm_file *file_private)
 void
 drm_gem_object_release(struct drm_gem_object *obj)
 {
+	reservation_object_fini(&obj->_resv);
 	WARN_ON(obj->dma_buf);
 
 	if (obj->filp)
@@ -833,6 +902,11 @@ drm_gem_object_free(struct kref *kref)
 	struct drm_gem_object *obj =
 		container_of(kref, struct drm_gem_object, refcount);
 	struct drm_device *dev = obj->dev;
+
+	if (obj->funcs && obj->funcs->free) {
+		obj->funcs->free(obj);
+		return;
+	}
 
 	if (dev->driver->gem_free_object_unlocked) {
 		dev->driver->gem_free_object_unlocked(obj);
@@ -959,15 +1033,6 @@ int drm_gem_mmap_obj(struct drm_gem_object *obj, unsigned long obj_size,
 	if (obj_size < vma->vm_end - vma->vm_start)
 		return -EINVAL;
 
-	if (!dev->driver->gem_vm_ops)
-		return -EINVAL;
-
-	vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
-	vma->vm_ops = dev->driver->gem_vm_ops;
-	vma->vm_private_data = obj;
-	vma->vm_page_prot = pgprot_writecombine(vm_get_page_prot(vma->vm_flags));
-	vma->vm_page_prot = pgprot_decrypted(vma->vm_page_prot);
-
 	/* Take a ref for this mapping of the object, so that the fault
 	 * handler can dereference the mmap offset's pointer to the object.
 	 * This reference is cleaned up by the corresponding vm_close
@@ -975,6 +1040,32 @@ int drm_gem_mmap_obj(struct drm_gem_object *obj, unsigned long obj_size,
 	 * by a vm_open due to mremap or partial unmap or whatever).
 	 */
 	drm_gem_object_get(obj);
+	vma->vm_private_data = obj;
+
+	if (obj->funcs && obj->funcs->mmap) {
+		/* 5.10 semantics: object funcs own the whole mapping (e.g.
+		 * drm_gem_shmem_mmap); the driver-level gem_vm_ops is not
+		 * involved and must not be required (panfrost has none).
+		 */
+		int ret = obj->funcs->mmap(obj, vma);
+		if (ret) {
+			drm_gem_object_put(obj);
+			return ret;
+		}
+		WARN_ON(!(vma->vm_flags & VM_DONTEXPAND));
+	} else if (obj->funcs && obj->funcs->vm_ops) {
+		vma->vm_ops = obj->funcs->vm_ops;
+		vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
+	} else {
+		if (!dev->driver->gem_vm_ops) {
+			drm_gem_object_put(obj);
+			return -EINVAL;
+		}
+		vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
+		vma->vm_ops = dev->driver->gem_vm_ops;
+		vma->vm_page_prot = pgprot_writecombine(vm_get_page_prot(vma->vm_flags));
+		vma->vm_page_prot = pgprot_decrypted(vma->vm_page_prot);
+	}
 
 	return 0;
 }
