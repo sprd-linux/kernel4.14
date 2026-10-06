@@ -632,7 +632,8 @@ int sprd_iommu_dettach_device(struct device *dev)
 	return 0;
 }
 
-int sprd_iommu_map(struct device *dev, struct sprd_iommu_map_data *data)
+static int sprd_iommu_map_internal(struct device *dev,
+		struct sprd_iommu_map_data *data, bool use_sg_table)
 {
 	int ret = 0;
 	struct sprd_iommu_dev *iommu_dev = NULL;
@@ -665,7 +666,13 @@ int sprd_iommu_map(struct device *dev, struct sprd_iommu_map_data *data)
 
 	spin_lock_irqsave(&iommu_dev->pgt_lock, flag);
 
-	ret = sprd_ion_get_sg(data->buf, &table);
+	/* A supplied table belongs to a generic DMA-BUF exporter. The
+	 * buffer pointer is only its cache identity in this path.
+	 */
+	if (use_sg_table)
+		table = data->table;
+	else
+		ret = sprd_ion_get_sg(data->buf, &table);
 	if (ret || table == NULL) {
 		IOMMU_ERR("%s get sg error, buf %p size 0x%zx ret %d table %p\n",
 			  iommu_dev->init_data->name,
@@ -676,7 +683,8 @@ int sprd_iommu_map(struct device *dev, struct sprd_iommu_map_data *data)
 	}
 
 	/*record iommu map count in ion buffer for checking iova leak*/
-	sprd_ion_set_dma(data->buf, iommu_dev->id);
+	if (!use_sg_table)
+		sprd_ion_set_dma(data->buf, iommu_dev->id);
 
 	/**search the sg_cache_pool to identify if buf already mapped;
 	* if yes, return cached iova directly, otherwise, alloc new iova for it;
@@ -742,12 +750,25 @@ int sprd_iommu_map(struct device *dev, struct sprd_iommu_map_data *data)
 	return ret;
 
 out1:
-	sprd_ion_put_dma(data->buf, iommu_dev->id);
+	if (!use_sg_table)
+		sprd_ion_put_dma(data->buf, iommu_dev->id);
 out:
 	spin_unlock_irqrestore(&iommu_dev->pgt_lock, flag);
 	return ret;
 }
+int sprd_iommu_map(struct device *dev, struct sprd_iommu_map_data *data)
+{
+	return sprd_iommu_map_internal(dev, data, false);
+}
 EXPORT_SYMBOL(sprd_iommu_map);
+
+int sprd_iommu_map_sg(struct device *dev, struct sprd_iommu_map_data *data)
+{
+	if (!data || !data->table)
+		return -EINVAL;
+	return sprd_iommu_map_internal(dev, data, true);
+}
+EXPORT_SYMBOL_GPL(sprd_iommu_map_sg);
 
 int sprd_iommu_map_with_idx(
 		struct device *dev,
@@ -865,7 +886,8 @@ out:
 }
 EXPORT_SYMBOL(sprd_iommu_map_with_idx);
 
-int sprd_iommu_unmap(struct device *dev, struct sprd_iommu_unmap_data *data)
+static int sprd_iommu_unmap_internal(struct device *dev,
+		struct sprd_iommu_unmap_data *data, bool use_sg_table)
 {
 	int ret = 0;
 	struct sprd_iommu_dev *iommu_dev = NULL;
@@ -916,7 +938,8 @@ int sprd_iommu_unmap(struct device *dev, struct sprd_iommu_unmap_data *data)
 		}
 	}
 
-	sprd_ion_put_dma(buf, iommu_dev->id);
+	if (!use_sg_table)
+		sprd_ion_put_dma(buf, iommu_dev->id);
 
 	sprd_iommu_remove_sg_iova(iommu_dev, iova, &be_free);
 	if (be_free) {
@@ -946,7 +969,17 @@ out:
 	spin_unlock_irqrestore(&iommu_dev->pgt_lock, flag);
 	return ret;
 }
+int sprd_iommu_unmap(struct device *dev, struct sprd_iommu_unmap_data *data)
+{
+	return sprd_iommu_unmap_internal(dev, data, false);
+}
 EXPORT_SYMBOL(sprd_iommu_unmap);
+
+int sprd_iommu_unmap_sg(struct device *dev, struct sprd_iommu_unmap_data *data)
+{
+	return sprd_iommu_unmap_internal(dev, data, true);
+}
+EXPORT_SYMBOL_GPL(sprd_iommu_unmap_sg);
 
 int sprd_iommu_unmap_with_idx(
 		struct device *dev,

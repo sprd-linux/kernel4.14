@@ -410,6 +410,15 @@ static struct drm_driver sprd_drm_drv = {
 	.gem_free_object_unlocked	= sprd_gem_free_object,
 	.dumb_create		= sprd_gem_cma_dumb_create,
 
+	/* Export must work too: X11 PRIME (modesetting + glamor GPU screen)
+	 * calls PRIME_HANDLE_TO_FD on this device when sharing scanout
+	 * pixmaps; Android only ever imported (ION), so the export hook was
+	 * never wired up. */
+	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
+	.gem_prime_export	= drm_gem_prime_export,
+	.gem_prime_get_sg_table	= sprd_gem_cma_prime_get_sg_table,
+	.gem_prime_mmap		= sprd_gem_cma_prime_mmap,
+
 	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
 	.gem_prime_import	= drm_gem_prime_import,
 	.gem_prime_import_sg_table = sprd_gem_prime_import_sg_table,

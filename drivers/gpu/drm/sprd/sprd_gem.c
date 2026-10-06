@@ -207,10 +207,19 @@ struct drm_gem_object *sprd_gem_prime_import_sg_table(struct drm_device *drm,
 
 	sprd_gem->sgtb = sgtb;
 
-	if (sprd_ion_is_reserved(-1, attach->dmabuf, &reserved))
+	/* ION's private data is an ion_buffer; GEM exporters such as
+	 * Panfrost put a drm_gem_object there. Never pass the latter to
+	 * an ION helper. Non-ION buffers use their attachment's SG table.
+	 */
+	sprd_gem->generic_dmabuf = !attach->dmabuf->exp_name ||
+		strcmp(attach->dmabuf->exp_name, "ion");
+	if (sprd_gem->generic_dmabuf) {
+		sprd_gem->need_iommu = sgtb->nents != 1;
+	} else if (sprd_ion_is_reserved(-1, attach->dmabuf, &reserved)) {
 		DRM_ERROR("sprd_ion_is_reserved fail\n");
-	else
+	} else {
 		sprd_gem->need_iommu = !reserved;
+	}
 
 	return &sprd_gem->base;
 }

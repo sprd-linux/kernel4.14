@@ -110,6 +110,9 @@ struct sprd_iommu_dev {
 
 /*map arguments for kernel space*/
 struct sprd_iommu_map_data {
+	/* Optional non-ION SG table; buf is an opaque cache key when set.
+	 * Used only by sprd_iommu_map_sg(), not the legacy ION API.
+	 */
 	struct sg_table *table;
 	void *buf;
 	size_t iova_size;
@@ -141,6 +144,10 @@ int sprd_iommu_dettach_device(struct device *dev);
 
 int sprd_iommu_map(struct device *dev,
 		struct sprd_iommu_map_data *data);
+int sprd_iommu_map_sg(struct device *dev,
+		struct sprd_iommu_map_data *data);
+int sprd_iommu_unmap_sg(struct device *dev,
+		struct sprd_iommu_unmap_data *data);
 int sprd_iommu_map_with_idx(struct device *dev,
 		struct sprd_iommu_map_data *data, int idx);
 int sprd_iommu_unmap(struct device *dev,
@@ -171,6 +178,18 @@ static inline int sprd_iommu_map(struct device *dev,
 
 static inline int sprd_iommu_unmap(struct device *dev,
 			struct sprd_iommu_unmap_data *data)
+{
+	return -ENODEV;
+}
+
+static inline int sprd_iommu_map_sg(struct device *dev,
+		struct sprd_iommu_map_data *data)
+{
+	return -ENODEV;
+}
+
+static inline int sprd_iommu_unmap_sg(struct device *dev,
+		struct sprd_iommu_unmap_data *data)
 {
 	return -ENODEV;
 }

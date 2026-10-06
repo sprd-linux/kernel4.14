@@ -23,6 +23,7 @@ struct sprd_gem_obj {
 	void *vaddr;
 	bool fb_reserved;
 	bool need_iommu;
+	bool generic_dmabuf;
 };
 
 #define to_sprd_gem_obj(x)	container_of(x, struct sprd_gem_obj, base)

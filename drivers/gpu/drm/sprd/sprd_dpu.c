@@ -92,11 +92,18 @@ static int sprd_dpu_iommu_map(struct device *dev,
 	struct sprd_iommu_map_data iommu_data = {};
 
 	dma_buf = sprd_gem->base.import_attach->dmabuf;
-	iommu_data.buf = dma_buf->priv;
+	if (sprd_gem->generic_dmabuf) {
+		iommu_data.buf = dma_buf; /* opaque cache key, not ION metadata */
+		iommu_data.table = sprd_gem->sgtb;
+	} else {
+		iommu_data.buf = dma_buf->priv;
+	}
 	iommu_data.iova_size = dma_buf->size;
 	iommu_data.ch_type = SPRD_IOMMU_FM_CH_RW;
 
-	if (sprd_iommu_map(dev, &iommu_data)) {
+	if (sprd_gem->generic_dmabuf ?
+	    sprd_iommu_map_sg(dev, &iommu_data) :
+	    sprd_iommu_map(dev, &iommu_data)) {
 		DRM_ERROR("failed to map iommu address\n");
 		return -EINVAL;
 	}
@@ -111,11 +118,17 @@ static void sprd_dpu_iommu_unmap(struct device *dev,
 {
 	struct sprd_iommu_unmap_data iommu_data = {};
 
+	if (sprd_gem->generic_dmabuf) {
+		iommu_data.buf = sprd_gem->base.import_attach->dmabuf;
+		iommu_data.table = sprd_gem->sgtb;
+	}
 	iommu_data.iova_size = sprd_gem->base.size;
 	iommu_data.iova_addr = sprd_gem->dma_addr;
 	iommu_data.ch_type = SPRD_IOMMU_FM_CH_RW;
 
-	if (sprd_iommu_unmap(dev, &iommu_data))
+	if (sprd_gem->generic_dmabuf ?
+	    sprd_iommu_unmap_sg(dev, &iommu_data) :
+	    sprd_iommu_unmap(dev, &iommu_data))
 		DRM_ERROR("failed to unmap iommu address\n");
 }
 
@@ -154,7 +167,14 @@ static int sprd_plane_prepare_fb(struct drm_plane *plane,
 	struct drm_gem_object *obj;
 	struct sprd_gem_obj *sprd_gem;
 	struct sprd_dpu *dpu;
-	int i;
+	int i, ret;
+
+	/* Imported GPU buffers must finish rendering before DPU scans them out.
+	 * sprd_atomic_wait_for_fences() only waits on fences attached here.
+	 */
+	ret = drm_gem_fb_prepare_fb(plane, new_state);
+	if (ret)
+		return ret;
 
 	if ((curr_state->fb == new_state->fb) || !new_state->fb)
 		return 0;
