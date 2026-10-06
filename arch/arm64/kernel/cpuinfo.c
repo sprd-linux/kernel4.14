@@ -156,6 +156,11 @@ static int c_show(struct seq_file *m, void *v)
 		if (compat)
 			seq_printf(m, "model name\t: ARMv8 Processor rev %d (%s)\n",
 				   MIDR_REVISION(midr), COMPAT_ELF_PLATFORM);
+		else if ((midr & MIDR_CPU_MODEL_MASK) == MIDR_CORTEX_A53)
+			seq_puts(m, "model name\t: ARM Cortex-A53\n");
+		else
+			seq_printf(m, "model name\t: ARMv8 Processor rev %d (aarch64)\n",
+				   MIDR_REVISION(midr));
 
 		seq_printf(m, "BogoMIPS\t: %lu.%02lu\n",
 			   loops_per_jiffy / (500000UL/HZ),
